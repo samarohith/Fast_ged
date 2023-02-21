@@ -302,8 +302,9 @@ int main(int argc, char *argv[]) {
     		//cout<<"line is "<<line<<endl;
 	        if(line == "") break;
 	        line_count++;
-	        //if(line_count < minline) continue;
-			if(line_count > 1000) break;
+	        if(line_count < minline) continue;
+			if(line_count > maxline) break;
+			//cout<<line<<endl;
 			//cout<<line_count<<endl;
 	        vector <string> tokens;
 	        stringstream ss(line);
