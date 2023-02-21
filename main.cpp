@@ -117,7 +117,11 @@ int main(int argc, char *argv[]) {
 	op.add<Switch>("g", "ged", "\'print_ged\'", &print_ged);
 
 	op.parse(argc, argv);
-
+	int minline, maxline;
+	cout<<"enter min line number"<<endl;
+	cin>> minline;
+	cout<<"enter max line number"<<endl;
+	cin>> maxline;
 	if(help_option->is_set()||argc == 1) cout << op << endl;
 	if(!database_option->is_set()||!query_option->is_set()) {
 		printf("!!! Database file name or query file name is not provided! Exit !!!\n");
@@ -187,7 +191,7 @@ int main(int argc, char *argv[]) {
 		}
 		if(print_ged) printf("*** GED ***\n");
 		ui min_ged = 10000000, max_ged = 0;
-		ifstream fin("old_all_graph_file.txt");
+		ifstream fin("all_graph_file.txt");
 		string line;
 		//for(ui i = 0;i < queries.size();i ++) {
 		while(fin)
@@ -216,7 +220,7 @@ int main(int argc, char *argv[]) {
 
 			ui lb = queries[i]->ged_lower_bound_filter(db[j], verify_upper_bound, vlabel_cnt, elabel_cnt, degree_q, degree_g, tmp);
 			if(lb > verify_upper_bound) continue;
-			//cout<<"hey there "<<lb<<endl;
+			//cout<<"debug line "<<lb<<endl;
 			++ candidates_cnt;
 			Timer t1;
 			Application *app = new Application(verify_upper_bound, lower_bound.c_str());
@@ -297,6 +301,11 @@ int main(int argc, char *argv[]) {
     		getline(fin, line);
     		//cout<<"line is "<<line<<endl;
 	        if(line == "") break;
+	        line_count++;
+	        if(line_count < minline) continue;
+			if(line_count > maxline) break;
+			//cout<<line<<endl;
+			//cout<<line_count<<endl;
 	        vector <string> tokens;
 	        stringstream ss(line);
 	        string temp;
@@ -340,13 +349,12 @@ int main(int argc, char *argv[]) {
 				if(res < minmax[floor(veo)-80]) minmax[floor(veo)-80] = res;
 				fout<<line<<" "<<res<<endl;
 
+				//cout<<line_count<<endl;
 				search_space += app->get_search_space();
 				if(res <= verify_upper_bound) ++ results_cnt;
 				delete app;
 			
 				if(print_ged) printf("\n");
-				line_count++;
-				if(line_count >= 1000) break;
 		}
 
 		fin.close();
