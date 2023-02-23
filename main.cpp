@@ -294,7 +294,7 @@ int main(int argc, char *argv[]) {
 		if(print_ged) printf("*** GEDs ***\n");
 		ui min_ged = 1000000000, max_ged = 0;
 		int line_count = 0;
-		vector<int> minmax(21,100);
+		vector<int> minmax(21,0);
 		string line;
 		while(fin)
     	{
@@ -346,7 +346,7 @@ int main(int argc, char *argv[]) {
 				total_res += res;
 				//printf("pair %lu (%s, %s): %d\n", i*db.size()+j, queries[i]->id.c_str(), db[j]->id.c_str(), res);
 				//cout<<veo<<endl;
-				if(res < minmax[floor(veo)-80]) minmax[floor(veo)-80] = res;
+				if(res > minmax[floor(veo)-80]) minmax[floor(veo)-80] = res;
 				fout<<line<<" "<<res<<endl;
 
 				//cout<<line_count<<endl;
