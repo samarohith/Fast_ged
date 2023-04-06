@@ -7,6 +7,15 @@
 using namespace std;
 using namespace popl;
 
+
+class custom
+{
+	public:
+		vector<pair<int,int>> vertices;
+		vector<pair<int,int>> edges;
+};
+
+
 void print_usage() {
 	printf("Usage: ./ged -h -d database_file -q query_file -m running_mode -p search_paradigm -l lower_bound_method -t ged_threshold\n");
 	printf("**** Note that for GED verification, if the returned value is not -1, then it is only an upper bound of (and may be larger than) the exact GED\n\n");
@@ -92,49 +101,51 @@ void write_queries(const char *file_name, const vector<Graph *> &db, const vecto
 	fclose(fout);
 }
 
-int main(int argc, char *argv[]) {
+int fast_ged(int x, int y, float veo, ofstream &fout, vector<custom> &graph_data) 
+{
+	string database = "x.txt"; string query = "y.txt";
 
-#ifndef NDEBUG
-	printf("**** GED (Debug) build at %s %s ***\n", __TIME__, __DATE__);
-#else
-	printf("**** GED (Release) build at %s %s ***\n", __TIME__, __DATE__);
-#endif
 
-	print_usage();
-
-	string mode, paradigm, lower_bound;
-	int threshold = -1;
-	bool print_ged = false;
-
-	OptionParser op("Allowed options");
-	auto help_option = op.add<Switch>("h", "help", "\'produce help message\'");
-	auto database_option = op.add<Value<string>>("d", "database", "\'database file name\'");
-	auto query_option = op.add<Value<string>>("q", "query", "\'query file name\'");
-	auto mode_option = op.add<Value<string>>("m", "mode", "\'running mode\' (search | pair)", "search", &mode);
-	auto paradigm_option = op.add<Value<string>>("p", "paradigm", "\'search paradigm\' (astar | dfs)", "astar", &paradigm);
-	auto lower_bound_option = op.add<Value<string>>("l", "lower_bound", "\'lower bound method\' (LSa | BMao | BMa)", "BMao", &lower_bound);
-	auto threshold_option = op.add<Value<int>>("t", "threshold", "\'threshold for GED verification; if not provided, then GED computation", -1, &threshold);
-	op.add<Switch>("g", "ged", "\'print_ged\'", &print_ged);
-
-	op.parse(argc, argv);
-	int minline, maxline;
-	cout<<"enter min line number"<<endl;
-	cin>> minline;
-	cout<<"enter max line number"<<endl;
-	cin>> maxline;
-	if(help_option->is_set()||argc == 1) cout << op << endl;
-	if(!database_option->is_set()||!query_option->is_set()) {
-		printf("!!! Database file name or query file name is not provided! Exit !!!\n");
-		return 0;
+	ofstream f1(database);
+	f1<<"t # 1"<<endl;
+	vector<pair<int,int>> vertex = graph_data[x].vertices;
+	vector<pair<int,int>> edge = graph_data[x].edges;
+	for(int i = 0; i < vertex.size(); i++)
+	{
+		f1<<"v "<< vertex[i].first<<" "<<vertex[i].second<<endl;
 	}
-	string database = database_option->value();
-	string query = query_option->value();
+	for(int i = 0; i < edge.size(); i++)
+	{
+		f1<<"e "<<edge[i].first<<" "<<edge[i].second<<" 1"<<endl;
+	}
+	f1.close();
+
+
+	ofstream f2(query);
+	f2<<"t # 2"<<endl;
+	vector<pair<int,int>> vertex2 = graph_data[y].vertices;
+	vector<pair<int,int>> edge2 = graph_data[y].edges;
+	for(int i = 0; i < vertex2.size(); i++)
+	{
+		f2<<"v "<<vertex2[i].first<<" "<<vertex2[i].second<<endl;
+	}
+	for(int i = 0; i < edge2.size(); i++)
+	{
+		f2<<"e "<<edge2[i].first<<" "<<edge2[i].second<<" 1"<<endl;
+	}
+	f2.close();
+
+
+
+	string mode = "pair", paradigm = "astar", lower_bound = "LSa";
+	int threshold = 6;
+	bool print_ged = true;
 
 	vector<Graph *> db;
 	map<string, ui> vM, eM;
 	ui max_db_n = load_db(database.c_str(), db, vM, eM);
 
-	printf("*** %s %s %s %d: %s %s", mode.c_str(), paradigm.c_str(), lower_bound.c_str(), threshold, database.c_str(), query.c_str());
+	//printf("*** %s %s %s %d: %s %s", mode.c_str(), paradigm.c_str(), lower_bound.c_str(), threshold, database.c_str(), query.c_str());
 #ifdef _EXPAND_ALL_
 	//printf(" Expand_all");
 #else
@@ -146,7 +157,7 @@ int main(int argc, char *argv[]) {
 #ifndef _UPPER_BOUND_
 	printf(" NoUpper_bound");
 #endif
-	printf(" ***\n");
+	printf("");
 
 	vector<Graph *> queries;
 	ui max_query_n = load_db(query.c_str(), queries, vM, eM);
@@ -181,50 +192,33 @@ int main(int argc, char *argv[]) {
 
 	Timer t;
 
-	if(strcmp(mode.c_str(), "pair") == 0) {
+	if(strcmp(mode.c_str(), "pair") == 0) 
+	{
 		long long time1 = 0, cnt1 = 0, ss1 = 0;
 		long long time2 = 0, cnt2 = 0, ss2 = 0;
-		//cout<<queries.size()<<" "<<db.size()<<endl;
+
 		if(queries.size() != db.size()) {
 			printf("Query size != db size in the pair mode\n");
 			exit(0);
 		}
-		if(print_ged) printf("*** GED ***\n");
-		ui min_ged = 10000000, max_ged = 0;
-		ifstream fin("all_graph_file.txt");
-		string line;
-		//for(ui i = 0;i < queries.size();i ++) {
-		while(fin)
-    	{
-    		getline(fin, line);
-    		//cout<<"line is "<<line<<endl;
-	        if(line == "") break;
-	        vector <string> tokens;
-	        stringstream ss(line);
-	        string temp;
-	        while(getline(ss, temp, ' '))
-	        {
-	            tokens.push_back(temp);
-	        }
-	        ui i = stoi(tokens[0])-1, j = stoi(tokens[1])-1, veo = stoi(tokens[2]);
-
-			/*
+		//if(print_ged) printf("*** GEDs ***\n");
+		ui min_ged = 1000000000, max_ged = 0;
+		for(ui i = 0;i < queries.size();i ++) {
 			ui current = i*100/queries.size();
 			if(current != pre) {
-				fprintf(stderr, "\r[%d%% finished]", current);
+				//fprintf(stderr, "\r[%d%% finished]", current);
 				fflush(stderr);
 				//cout<<"\r["<<current<<"% finished]"<<flush;
 				pre = current;
 			}
-			*/
 
-			ui lb = queries[i]->ged_lower_bound_filter(db[j], verify_upper_bound, vlabel_cnt, elabel_cnt, degree_q, degree_g, tmp);
+			ui lb = queries[i]->ged_lower_bound_filter(db[i], verify_upper_bound, vlabel_cnt, elabel_cnt, degree_q, degree_g, tmp);
 			if(lb > verify_upper_bound) continue;
-			//cout<<"debug line "<<lb<<endl;
+
 			++ candidates_cnt;
 			Timer t1;
 			Application *app = new Application(verify_upper_bound, lower_bound.c_str());
-			app->init(db[j], queries[i]);
+			app->init(db[i], queries[i]);
 			int res = INF;
 			if(strcmp(paradigm.c_str(), "astar") == 0) res = app->AStar();
 			else res = app->DFS(NULL);
@@ -233,10 +227,11 @@ int main(int argc, char *argv[]) {
 #endif
 			search_space += app->get_search_space();
 			if(res <= verify_upper_bound) ++ results_cnt;
-			else res = -1;
-			//cout<<"hello there "<<res<<endl;
+			//else res = -1;
+
 			if(print_ged) {
-				printf("%d\n", res);
+				//printf("%d\n", res);
+				fout<<x<<" "<<y<<" "<<veo<<" "<<res<<endl;
 				if(res > max_ged) max_ged = res;
 				if(res < min_ged) min_ged = res;
 			}
@@ -259,15 +254,14 @@ int main(int argc, char *argv[]) {
 
 			delete app;
 		}
-		fin.close();
-		fprintf(stderr, "\n");
+		//fprintf(stderr, "\n");
 		if(print_ged) {
-			printf("*** GEDs ***\n");
-			printf("min_ged: %u, max_ged: %u\n", min_ged, max_ged);
+			//printf("*** GEDs ***\n");
+			//printf("min_ged: %u, max_ged: %u\n", min_ged, max_ged);
 		}
 
 		//printf("%d %d\n", cnt1, cnt2);
-		if(cnt1 + cnt2 != 0) printf("total average time: %s, total average_ss: %lld\n", Utility::integer_to_string((time1+time2)/(cnt1+cnt2)).c_str(), (ss1+ss2)/(cnt1+cnt2));
+		/*if(cnt1 + cnt2 != 0) printf("total average time: %s, total average_ss: %lld\n", Utility::integer_to_string((time1+time2)/(cnt1+cnt2)).c_str(), (ss1+ss2)/(cnt1+cnt2));
 		if(verify_upper_bound < INF) {
 			printf("Dissimilar (%lld pairs) average time: ", cnt2);
 			if(cnt2 == 0) printf("0, ");
@@ -284,94 +278,10 @@ int main(int argc, char *argv[]) {
 			if(cnt1 == 0) printf("0\n");
 			else printf("%lld\n", ss1/cnt1);
 		}
+		*/
 	}
-	else {
-		//print_ged = true;
-		long long total_res = 0;
-		ifstream fin("all_graph_file.txt");
-		ofstream fout("output.txt");
-    	//cout<<"debug output "<<endl;
-		if(print_ged) printf("*** GEDs ***\n");
-		ui min_ged = 1000000000, max_ged = 0;
-		int line_count = 0;
-		vector<int> minmax(21,100);
-		string line;
-		while(fin)
-    	{
-    		getline(fin, line);
-    		//cout<<"line is "<<line<<endl;
-	        if(line == "") break;
-	        line_count++;
-	        if(line_count < minline) continue;
-			if(line_count > maxline) break;
-			//cout<<line<<endl;
-			//cout<<line_count<<endl;
-	        vector <string> tokens;
-	        stringstream ss(line);
-	        string temp;
-	        while(getline(ss, temp, ' '))
-	        {
-	            tokens.push_back(temp);
-	        }
-	        ui i = stoi(tokens[0])-1, j = stoi(tokens[1])-1, veo = stoi(tokens[2]);
-	        
-				ui current = (i*(long long)(db.size())+j+1)*100/(queries.size()*(long long)(db.size()));
-				if(current != pre) {
-					fprintf(stderr, "\r[%d%% finished]", current);
-					fflush(stderr);
-					//cout<<"\r["<<current<<"% finished]"<<flush;
-					pre = current;
-				}
 
-				ui lb = queries[i]->ged_lower_bound_filter(db[j], verify_upper_bound, vlabel_cnt, elabel_cnt, degree_q, degree_g, tmp);
-				if(lb > verify_upper_bound) continue;
-
-				++ candidates_cnt;
-				Application *app = new Application(verify_upper_bound, lower_bound.c_str());
-				//app->init(db_v[i], db_e[i], query_v[i], query_e[i]);
-				app->init(db[j], queries[i]);
-				int res = INF;
-				if(strcmp(paradigm.c_str(), "astar") == 0) res = app->AStar();
-				else res = app->DFS(NULL);
-#ifndef NDEBUG
-				assert(res == app->compute_ged_of_BX());
-#endif
-
-				if(print_ged) {
-					if(j) printf(" ");
-					printf("%u", res);
-					if(res > max_ged) max_ged = res;
-					if(res < min_ged) min_ged = res;
-				}
-				total_res += res;
-				//printf("pair %lu (%s, %s): %d\n", i*db.size()+j, queries[i]->id.c_str(), db[j]->id.c_str(), res);
-				//cout<<veo<<endl;
-				if(res < minmax[floor(veo)-80]) minmax[floor(veo)-80] = res;
-				fout<<line<<" "<<res<<endl;
-
-				//cout<<line_count<<endl;
-				search_space += app->get_search_space();
-				if(res <= verify_upper_bound) ++ results_cnt;
-				delete app;
-			
-				if(print_ged) printf("\n");
-		}
-
-		fin.close();
-		ofstream fo("array_info.txt");
-		for(int i = 0; i < minmax.size(); i++)
-			fo<< i+80 << " "<< minmax[i]<<endl;
-		fo.close();
-		fout.close();
-
-		fprintf(stderr, "\n");
-		if(print_ged) {
-			printf("*** GEDs ***\n");
-			printf("min_ged: %u, max_ged: %u\n", min_ged, max_ged);
-		}
-		//printf("Average GED: %.3lf\n", double(total_res)/(queries.size()*db.size()));
-	}
-	printf("Total time: %s (microseconds), total search space: %lld\n #candidates: %lld, #matches: %lld\n", Utility::integer_to_string(t.elapsed()).c_str(), search_space, candidates_cnt, results_cnt);
+	//printf("Total time: %s (microseconds), total search space: %lld\n #candidates: %lld, #matches: %lld\n", Utility::integer_to_string(t.elapsed()).c_str(), search_space, candidates_cnt, results_cnt);
 
 	delete[] vlabel_cnt; vlabel_cnt = NULL;
 	delete[] elabel_cnt; elabel_cnt = NULL;
@@ -388,4 +298,89 @@ int main(int argc, char *argv[]) {
 		queries[i] = nullptr;
 	}
 	return 0;
+}
+
+void load_dataset(string dname, vector<custom> &graph_data)
+{
+	string line;
+	ifstream f1(dname);
+	if(!f1.is_open())
+	{
+		cout<<"file doesnt exist"<<endl;
+		return;
+	}
+	cout<<"hello"<<endl;
+	vector<pair<int,int>> vertex;
+	vector<pair<int,int>> edge;
+	while(f1)
+	{
+		getline(f1, line);
+        if(line == "") break;
+        vector <string> tokens;
+        stringstream ss(line);
+        string temp;
+        while(getline(ss, temp, ' '))
+        {
+            tokens.push_back(temp);
+        }
+        if(line[0] == 't')
+        {
+        	custom g;
+       	 	g.vertices = vertex;
+       	 	g.edges = edge;
+       	 	graph_data.push_back(g);
+       	 	vertex.clear();
+       	 	edge.clear();
+        }
+        else if(line[0] == 'v') vertex.push_back({stoi(tokens[1]), stoi(tokens[2])});
+        else edge.push_back({stoi(tokens[1]), stoi(tokens[2])});
+	}
+	f1.close();
+}
+
+int main(int argc, char const *argv[])
+{
+	string dataset_name = argv[1];
+	string graph_file = dataset_name + "/all_graph_file.txt";
+	string dname = dataset_name + "/" + dataset_name + ".txt";
+
+	vector<custom> graph_data;
+	load_dataset(dname, graph_data);
+	cout<<"loading dataset done"<<endl;
+
+	ifstream fin(graph_file);
+	ofstream fout("final_result.txt");
+
+	string line;
+	int szx = 0, szy = 0, sz = 0, mini = 100;
+	while(fin)
+	{
+		getline(fin, line);
+	    if(line == "") break;
+	    vector <string> tokens;
+	    stringstream ss(line);
+	    string temp;
+	    while(getline(ss, temp, ' '))
+	    {
+        	tokens.push_back(temp);
+    	}
+    	int x = stoi(tokens[0]), y = stoi(tokens[1]);
+    	if(graph_data[x].vertices.size() < 20 || graph_data[y].vertices.size() < 20) continue;
+    	float veo = stof(tokens[2]);
+    	fast_ged(x, y, veo, fout, graph_data);
+    	if(veo == 100)
+    	{
+    		sz = graph_data[x].vertices.size();
+    		if(mini > sz) 
+    		{
+    			mini = sz;
+    			szx = x;
+    			szy = y;
+    		}
+    	}
+    	//cout<<"done"<<endl;
+    }
+    cout<<"szx is "<<szx<<" szy is "<<szy<<" mini is "<<mini<<endl;
+    fin.close();
+    fout.close();
 }
