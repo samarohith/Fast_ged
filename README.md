@@ -7,22 +7,7 @@ $ make
 It generates an executable "ged".
 
 ## Run the code
+Make sure the dataset folder and the data text file has the same name. Along with that we need to have all_graph_file.txt which has all graph pairs along with their similarity threshold.
 
-You can find how to use the code by
-```sh
-$ ./ged -h
-```
-
-An example of graph similarity search on the AIDS dataset with threshold 5 is as follows
-```sh
-$ ./ged -d datasets/AIDS.txt -q datasets/AIDS_query100.txt -m search -p astar -l LSa -t 5
-``` 
-
-## Data format
-t [starts a new graph, followed by two arbitrary strings]
-
-v [vertex_id] [vertex_label]
-
-e [vertex_id1] [vertex_id2] [edge_label]
-
-[graph_q.txt](datasets/graph_q.txt) and [graph_g.txt](datasets/graph_g.txt) are two example data files. Note that, vertex_id must be consecutive numbers starting from 0.
+You can run the code by
+$ ./ged dataset_name
